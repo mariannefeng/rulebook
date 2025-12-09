@@ -1,0 +1,45 @@
+{
+  "name": "app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@heroui/input": "^2.4.28",
+    "@heroui/react": "^3.0.0-beta.2",
+    "@heroui/styles": "^3.0.0-beta.2",
+    "@heroui/system": "^2.4.23",
+    "@heroui/theme": "^2.4.23",
+    "@iconify/react": "^6.0.2",
+    "@tailwindcss/vite": "^4.1.17",
+    "@wojtekmaj/react-hooks": "^2.0.4",
+    "framer-motion": "^12.23.25",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-pdf": "^10.2.0",
+    "react-router-dom": "^7.10.1",
+    "tailwindcss": "^4.1.17"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@types/react-pdf": "^6.2.0",
+    "@vite-pwa/assets-generator": "^1.0.2",
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^7.2.4",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}

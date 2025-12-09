@@ -1,0 +1,130 @@
+import { useCallback, useState } from "react";
+import { useParams } from "react-router-dom";
+import { useWindowWidth } from "@wojtekmaj/react-hooks";
+import { Document, Page, pdfjs } from "react-pdf";
+import { Button, InputGroup } from "@heroui/react";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+import type { PDFDocumentProxy } from "pdfjs-dist";
+import { Icon } from "@iconify/react";
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
+
+const apiUrl = import.meta.env.VITE_API_URL;
+
+function Rulebook() {
+  const width = useWindowWidth() ?? 1;
+  const [search, setSearch] = useState("");
+
+  const { gameId } = useParams<{ gameId: string }>();
+  const [numPages, setNumPages] = useState<number>();
+  const [error, setError] = useState<string | null>(null);
+  const [currSearchIdx, setCurrSearchIdx] = useState(0);
+
+  const pdfUrl = `${apiUrl}/games/${gameId}/rules`;
+
+  function onDocumentLoadSuccess({ numPages: nextNumPages }: PDFDocumentProxy) {
+    setError(null);
+    setNumPages(nextNumPages);
+  }
+
+  function onDocumentLoadError(error: Error) {
+    setError(`Failed to load PDF: ${error.message}`);
+  }
+
+  const textRenderer = useCallback(
+    (textItem: { str: string }) => {
+      return textItem.str.replace(search, (value) => `<mark>${value}</mark>`);
+    },
+    [search]
+  );
+
+  const searchText = () => {
+    const marks = document.querySelectorAll("mark");
+    if (marks.length > 0) {
+      marks.forEach((mark) => {
+        mark.classList.remove("current-match");
+      });
+
+      marks[currSearchIdx].classList.add("current-match");
+
+      marks[currSearchIdx].scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      if (currSearchIdx === marks.length - 1) {
+        setCurrSearchIdx(0);
+      } else {
+        setCurrSearchIdx(currSearchIdx + 1);
+      }
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex gap-5 sticky top-0 z-100 py-5 px-5">
+        <InputGroup className="w-full">
+          <InputGroup.Input
+            className="w-full h-full"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
+            placeholder="Search for a keyword"
+          />
+          {search.length > 0 && (
+            <InputGroup.Suffix className="pr-0">
+              <Button
+                isIconOnly
+                aria-label="Search"
+                size="sm"
+                variant="ghost"
+                onPress={() => {
+                  setSearch("");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                <Icon icon="gravity-ui:circle-letter-x" />
+              </Button>
+            </InputGroup.Suffix>
+          )}
+        </InputGroup>
+        <Button onPress={searchText}>
+          <Icon icon="gravity-ui:magnifier" />
+          Search
+        </Button>
+      </div>
+
+      <div>
+        {error && <div className="text-red-500 text-center">{error}</div>}
+        <Document
+          file={pdfUrl}
+          className="flex flex-col items-center gap-5"
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={onDocumentLoadError}
+          loading={<div>Loading PDF...</div>}
+          error={
+            <div className="text-red-500">
+              Failed to load PDF. Please check if the file exists.
+            </div>
+          }
+        >
+          {Array.from(new Array(numPages), (_, index) => (
+            <Page
+              customTextRenderer={textRenderer}
+              key={`page_${index + 1}`}
+              pageNumber={index + 1}
+              width={Math.min(width * 0.9, 800)}
+            />
+          ))}
+        </Document>
+      </div>
+    </div>
+  );
+}
+
+export default Rulebook;

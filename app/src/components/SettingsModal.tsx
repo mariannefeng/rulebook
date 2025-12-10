@@ -57,7 +57,9 @@ function SettingsModal() {
     <Modal>
       <Button
         isIconOnly
-        className={`fixed bottom-12 ${buttonsPosition}-12 z-40`}
+        className={`fixed bottom-12 ${
+          buttonsPosition === "left" ? "left-12" : "right-12"
+        } z-40`}
       >
         <Icon icon="gravity-ui:gear" />
       </Button>

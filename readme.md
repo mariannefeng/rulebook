@@ -27,13 +27,17 @@ general gist:
 
 todo:
 
-- add posthog
-- add back button??
-- add 3 other colors
+- fix settings dropdown weird flicker
+- allow zoom on pdf screen
 - keyboard shortcut
 
 done:
 
+- add ability to move action buttons to the left or right
+- add back button
+- hide pdf search until pdf loads
+- add 3 other colors
+- add posthog
 - setting to configure theming color across the board
 - add language to settings
 - cache pdf

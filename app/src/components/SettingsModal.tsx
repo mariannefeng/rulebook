@@ -9,8 +9,15 @@ import SettingsContext from "../contexts/SettingsContext";
 const apiUrl = import.meta.env.VITE_API_URL;
 
 function SettingsModal() {
-  const { theme, language, setTheme, setLanguage } =
-    useContext(SettingsContext);
+  const {
+    theme,
+    language,
+    setTheme,
+    setLanguage,
+    themes,
+    buttonsPosition,
+    setButtonsPosition,
+  } = useContext(SettingsContext);
 
   const [languages, setLanguages] = useState<string[]>([]);
 
@@ -40,9 +47,18 @@ function SettingsModal() {
     setLanguage(langKey);
   };
 
+  const selectButtonsPosition = (keys: Selection) => {
+    const arr = Array.from(keys);
+    const buttonsPositionKey = arr.length > 0 ? String(arr[0]) : "";
+    setButtonsPosition(buttonsPositionKey);
+  };
+
   return (
     <Modal>
-      <Button isIconOnly className="fixed bottom-12 right-12 z-40">
+      <Button
+        isIconOnly
+        className={`fixed bottom-12 ${buttonsPosition}-12 z-40`}
+      >
         <Icon icon="gravity-ui:gear" />
       </Button>
       <Modal.Container className={`theme-${theme} md:w-1/2`}>
@@ -71,20 +87,19 @@ function SettingsModal() {
                             onSelectionChange={selectTheme}
                           >
                             <Dropdown.Section>
-                              <Dropdown.Item id="default" textValue="default">
-                                <Dropdown.ItemIndicator />
-                                <Label>default</Label>
-                              </Dropdown.Item>
-                              <Dropdown.Item id="muted" textValue="muted">
-                                <Dropdown.ItemIndicator />
-                                <Label>muted</Label>
-                              </Dropdown.Item>
+                              {themes.map((t) => (
+                                <Dropdown.Item key={t} id={t} textValue={t}>
+                                  <Dropdown.ItemIndicator />
+                                  <Label>{t}</Label>
+                                </Dropdown.Item>
+                              ))}
                             </Dropdown.Section>
                           </Dropdown.Menu>
                         </Dropdown.Popover>
                       </Dropdown>
                     </div>
                   </div>
+
                   <div className="flex justify-between items-center">
                     <p>Language</p>
                     <Dropdown>
@@ -100,11 +115,51 @@ function SettingsModal() {
                         >
                           <Dropdown.Section>
                             {languages.map((lang) => (
-                              <Dropdown.Item id={lang} textValue={lang}>
+                              <Dropdown.Item
+                                key={lang}
+                                id={lang}
+                                textValue={lang}
+                              >
                                 <Dropdown.ItemIndicator />
                                 <Label>{lang}</Label>
                               </Dropdown.Item>
                             ))}
+                          </Dropdown.Section>
+                        </Dropdown.Menu>
+                      </Dropdown.Popover>
+                    </Dropdown>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <p>Button Position</p>
+                    <Dropdown>
+                      <Button aria-label="Menu" variant="secondary">
+                        {buttonsPosition}
+                      </Button>
+                      <Dropdown.Popover className="min-w-[256px]">
+                        <Dropdown.Menu
+                          disallowEmptySelection
+                          selectedKeys={new Set([buttonsPosition])}
+                          selectionMode="single"
+                          onSelectionChange={selectButtonsPosition}
+                        >
+                          <Dropdown.Section>
+                            <Dropdown.Item
+                              key="left"
+                              id="left"
+                              textValue="left"
+                            >
+                              <Dropdown.ItemIndicator />
+                              <Label>Left</Label>
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              key="right"
+                              id="right"
+                              textValue="right"
+                            >
+                              <Dropdown.ItemIndicator />
+                              <Label>Right</Label>
+                            </Dropdown.Item>
                           </Dropdown.Section>
                         </Dropdown.Menu>
                       </Dropdown.Popover>

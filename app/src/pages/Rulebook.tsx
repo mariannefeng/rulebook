@@ -84,36 +84,38 @@ function Rulebook() {
   };
 
   return (
-    <BasePage>
-      <div className="flex gap-5 sticky top-0 z-100 py-5 px-5">
-        <InputGroup className="w-full">
-          <InputGroup.Input
-            className="w-full h-full"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-            }}
-            placeholder="Search for a keyword"
-          />
-          {search.length > 0 && (
-            <InputGroup.Suffix className="pr-0">
-              <Button
-                isIconOnly
-                aria-label="Search"
-                size="sm"
-                variant="ghost"
-                onPress={resetSearch}
-              >
-                <Icon icon="gravity-ui:circle-letter-x" />
-              </Button>
-            </InputGroup.Suffix>
-          )}
-        </InputGroup>
-        <Button onPress={searchText}>
-          <Icon icon="gravity-ui:magnifier" />
-          Search
-        </Button>
-      </div>
+    <BasePage showBackButton={true}>
+      {!error && loadComplete && (
+        <div className="flex gap-5 sticky top-0 z-100 py-5 px-5">
+          <InputGroup className="w-full">
+            <InputGroup.Input
+              className="w-full h-full"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
+              placeholder="Search for a keyword"
+            />
+            {search.length > 0 && (
+              <InputGroup.Suffix className="pr-0">
+                <Button
+                  isIconOnly
+                  aria-label="Search"
+                  size="sm"
+                  variant="ghost"
+                  onPress={resetSearch}
+                >
+                  <Icon icon="gravity-ui:circle-letter-x" />
+                </Button>
+              </InputGroup.Suffix>
+            )}
+          </InputGroup>
+          <Button onPress={searchText}>
+            <Icon icon="gravity-ui:magnifier" />
+            Search
+          </Button>
+        </div>
+      )}
 
       <div>
         {error && <div className="text-red-500 text-center">{error}</div>}

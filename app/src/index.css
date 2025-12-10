@@ -6,6 +6,21 @@
   --color-accent: oklch(0.4649 0.0821 235.87);
 }
 
+.theme-rosewood {
+  --accent: oklch(0.5294 0.172 12.77);
+  --color-accent: oklch(0.5294 0.172 12.77);
+}
+
+.theme-toffee {
+  --accent: oklch(0.5549 0.0918 49.57);
+  --color-accent: oklch(0.5549 0.0918 49.57);
+}
+
+.theme-tropical {
+  --accent: oklch(0.6391 0.0648 185.11);
+  --color-accent: oklch(0.6391 0.0648 185.11);
+}
+
 html {
   font-size: 16px;
 }

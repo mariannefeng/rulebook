@@ -1,18 +1,28 @@
 import { createContext, useState, useEffect } from "react";
 
-// Keys for localStorage
 const STORAGE_KEYS = {
   THEME: "rulebook-theme",
   LANGUAGE: "rulebook-language",
+  BUTTONS_POSITION: "rulebook-buttons-position",
 } as const;
 
-// Default values
 const DEFAULTS = {
   THEME: "default",
   LANGUAGE: "en",
+  BUTTONS_POSITION: "right",
+  THEMES: ["default", "muted", "rosewood", "toffee", "tropical"],
 } as const;
 
-// Helper functions to read from localStorage
+type Settings = {
+  theme: string;
+  buttonsPosition: string;
+  setButtonsPosition: (buttonsPosition: string) => void;
+  setTheme: (theme: string) => void;
+  language: string;
+  setLanguage: (language: string) => void;
+  themes: string[];
+};
+
 const getStoredTheme = (): string => {
   if (typeof window === "undefined") return DEFAULTS.THEME;
   const stored = localStorage.getItem(STORAGE_KEYS.THEME);
@@ -25,16 +35,20 @@ const getStoredLanguage = (): string => {
   return stored || DEFAULTS.LANGUAGE;
 };
 
-const SettingsContext = createContext<{
-  theme: string;
-  setTheme: (theme: string) => void;
-  language: string;
-  setLanguage: (language: string) => void;
-}>({
+const getStoredButtonsPosition = (): string => {
+  if (typeof window === "undefined") return DEFAULTS.BUTTONS_POSITION;
+  const stored = localStorage.getItem(STORAGE_KEYS.BUTTONS_POSITION);
+  return stored || DEFAULTS.BUTTONS_POSITION;
+};
+
+const SettingsContext = createContext<Settings>({
   theme: DEFAULTS.THEME,
+  buttonsPosition: DEFAULTS.BUTTONS_POSITION,
+  setButtonsPosition: () => {},
   setTheme: () => {},
   language: DEFAULTS.LANGUAGE,
   setLanguage: () => {},
+  themes: [...DEFAULTS.THEMES],
 });
 
 export const SettingsProvider = ({
@@ -42,9 +56,15 @@ export const SettingsProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  // Initialize state from localStorage
   const [theme, setThemeState] = useState<string>(getStoredTheme);
   const [language, setLanguageState] = useState<string>(getStoredLanguage);
+  const [buttonsPosition, setButtonsPositionState] = useState<string>(
+    getStoredButtonsPosition
+  );
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.BUTTONS_POSITION, buttonsPosition);
+  }, [buttonsPosition]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.THEME, theme);
@@ -54,6 +74,10 @@ export const SettingsProvider = ({
     localStorage.setItem(STORAGE_KEYS.LANGUAGE, language);
   }, [language]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.BUTTONS_POSITION, buttonsPosition);
+  }, [buttonsPosition]);
+
   const setTheme = (newTheme: string) => {
     setThemeState(newTheme);
   };
@@ -62,9 +86,21 @@ export const SettingsProvider = ({
     setLanguageState(newLanguage);
   };
 
+  const setButtonsPosition = (newButtonsPosition: string) => {
+    setButtonsPositionState(newButtonsPosition);
+  };
+
   return (
     <SettingsContext.Provider
-      value={{ theme, setTheme, language, setLanguage }}
+      value={{
+        theme,
+        setTheme,
+        language,
+        setLanguage,
+        themes: [...DEFAULTS.THEMES],
+        buttonsPosition,
+        setButtonsPosition,
+      }}
     >
       {children}
     </SettingsContext.Provider>

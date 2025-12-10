@@ -1,14 +1,30 @@
 import { useContext, type PropsWithChildren } from "react";
 import SettingsModal from "./SettingsModal";
 import SettingsContext from "../contexts/SettingsContext";
+import { Button } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { useNavigate } from "react-router-dom";
 
-function BasePage({ children }: PropsWithChildren) {
-  const { theme } = useContext(SettingsContext);
+function BasePage({
+  children,
+  showBackButton = false,
+}: PropsWithChildren & { showBackButton?: boolean }) {
+  const navigate = useNavigate();
+  const { theme, buttonsPosition } = useContext(SettingsContext);
 
   return (
     <div className={`h-full theme-${theme}`}>
       {children}
       <SettingsModal />
+      {showBackButton && (
+        <Button
+          isIconOnly
+          className={`fixed bottom-28 ${buttonsPosition}-12 z-40`}
+          onPress={() => navigate(-1)}
+        >
+          <Icon icon="gravity-ui:arrow-left" />
+        </Button>
+      )}
     </div>
   );
 }

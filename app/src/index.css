@@ -3,6 +3,7 @@
 
 .theme-muted {
   --accent: oklch(0.4649 0.0821 235.87);
+  --color-accent: oklch(0.4649 0.0821 235.87);
 }
 
 html {

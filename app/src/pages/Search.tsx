@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, Input, Spinner } from "@heroui/react";
 import { GameCards } from "../components/GameCards";
+import BasePage from "../components/BasePage";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 const STORAGE_KEY = "rulebook";
@@ -53,33 +54,39 @@ function Search() {
   };
 
   return (
-    <div className="flex flex-col gap-10 p-5 items-center w-full">
-      <div className="flex gap-5 w-full">
-        <Input
-          className="w-full"
-          aria-label="Search"
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-          }}
-          placeholder="Search for a board game"
-        />
-        <Button onPress={searchGame}>Search</Button>
+    <BasePage>
+      <div className="flex flex-col gap-10 p-5 items-center w-full">
+        <div className="flex gap-5 w-full">
+          <Input
+            className="w-full"
+            aria-label="Search"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
+            placeholder="Search for a board game"
+          />
+          <Button onPress={searchGame}>Search</Button>
+        </div>
+        {recents.length > 0 && (
+          <GameCards
+            label="Recently viewed"
+            cardClassName="bg-primary"
+            titleClassName="text-white"
+            games={recents}
+            onCardClick={handleCardClick}
+          />
+        )}
+        {loading && <Spinner size="xl" />}
+        {games.length > 0 && (
+          <GameCards
+            label="Search"
+            games={games}
+            onCardClick={handleCardClick}
+          />
+        )}
       </div>
-      {recents.length > 0 && (
-        <GameCards
-          label="Recently viewed"
-          cardClassName="bg-primary"
-          titleClassName="text-white"
-          games={recents}
-          onCardClick={handleCardClick}
-        />
-      )}
-      {loading && <Spinner size="xl" />}
-      {games.length > 0 && (
-        <GameCards label="Search" games={games} onCardClick={handleCardClick} />
-      )}
-    </div>
+    </BasePage>
   );
 }
 

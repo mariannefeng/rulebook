@@ -24,13 +24,14 @@ done:
 
 todo:
 
+- keyboard shortcut
 - setting to configure theming color across the board
-- loading
 - support for different languages
 - optional to download to phone to avoid server at all (offline support)
 
 done:
 
+- loading
 - homepage: game search
 - mobile friendly (should scale down accordingly)
 - search for a game

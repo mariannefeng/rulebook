@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
+.theme-muted {
+  --accent: oklch(0.4649 0.0821 235.87);
+}
+
 html {
   font-size: 16px;
 }

@@ -7,6 +7,7 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { Icon } from "@iconify/react";
+import BasePage from "../components/BasePage";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -81,7 +82,7 @@ function Rulebook() {
   };
 
   return (
-    <div>
+    <BasePage>
       <div className="flex gap-5 sticky top-0 z-100 py-5 px-5">
         <InputGroup className="w-full">
           <InputGroup.Input
@@ -137,7 +138,7 @@ function Rulebook() {
           ))}
         </Document>
       </div>
-    </div>
+    </BasePage>
   );
 }
 

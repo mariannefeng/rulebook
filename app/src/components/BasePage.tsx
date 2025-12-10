@@ -22,7 +22,7 @@ function BasePage({ children }: PropsWithChildren) {
         <Button isIconOnly className="fixed bottom-12 right-12 z-40">
           <Icon icon="gravity-ui:gear" />
         </Button>
-        <Modal.Container className={`theme-${theme}`}>
+        <Modal.Container className={`theme-${theme} md:w-1/2`}>
           <Modal.Dialog className="sm:max-w-[360px]">
             {({ close }) => (
               <>

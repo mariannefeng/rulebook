@@ -68,7 +68,7 @@ function BasePage({ children }: PropsWithChildren) {
                 </Modal.Body>
                 <Modal.Footer>
                   <Button className="w-full" onPress={close}>
-                    Continue
+                    Exit
                   </Button>
                 </Modal.Footer>
               </>

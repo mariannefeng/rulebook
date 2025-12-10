@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Button, Input, Spinner } from "@heroui/react";
 import { GameCards } from "../components/GameCards";
 import BasePage from "../components/BasePage";
+import SettingsContext from "../contexts/SettingsContext";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 const STORAGE_KEY = "rulebook";
@@ -18,6 +19,7 @@ const getRecent = () => {
 };
 
 function Search() {
+  const { language } = useContext(SettingsContext);
   const [search, setSearch] = useState("");
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,7 +30,7 @@ function Search() {
   const searchGame = () => {
     setLoading(true);
 
-    fetch(`${apiUrl}/games?search=${search}`)
+    fetch(`${apiUrl}/games?search=${search}&language=${language}`)
       .then((response) => response.json())
       .then((data) => {
         setLoading(false);

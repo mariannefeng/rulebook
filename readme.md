@@ -27,7 +27,8 @@ general gist:
 
 todo:
 
-- optional to download to phone to avoid server at all (offline support)
+- add posthog
+- add back button??
 - add 3 other colors
 - keyboard shortcut
 
@@ -35,6 +36,7 @@ done:
 
 - setting to configure theming color across the board
 - add language to settings
+- cache pdf
 - save settings to local storage
 - loading
 - homepage: game search

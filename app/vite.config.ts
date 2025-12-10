@@ -3,13 +3,32 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      workbox: {
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => {
+              return (
+                url.pathname.includes("/games/") &&
+                url.pathname.includes("/rules")
+              );
+            },
+            handler: "CacheFirst",
+            options: {
+              cacheName: "pdf-cache",
+              expiration: {
+                maxEntries: 50, // Limit number of cached PDFs
+                maxAgeSeconds: 60 * 60 * 24 * 100, // 100 days
+              },
+            },
+          },
+        ],
+      },
       manifest: {
         name: "Rulebook",
         short_name: "Rulebook",

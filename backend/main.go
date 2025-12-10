@@ -58,9 +58,8 @@ type GameResult struct {
 }
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
+		log.Fatalln("Error loading .env")
 	}
 
 	accessKeyId := os.Getenv("R2_ACCESS_KEY_ID")

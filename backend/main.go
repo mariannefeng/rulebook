@@ -1,16 +1,25 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/andybalholm/cascadia"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"golang.org/x/net/html"
 )
 
@@ -34,13 +43,57 @@ func getAttr(n *html.Node, key string) string {
 	return ""
 }
 
-var gameIdToPDF = make(map[string]string)
+var gameIdToLinks = make(map[string]map[string]string) // map[gameId][language] = PDF link
+
+type ServerDeps struct {
+	S3Client *s3.Client
+	Bucket   string
+}
+
+type GameResult struct {
+	Id       string `json:"id"`
+	Name     string `json:"name"`
+	Link     string `json:"link"`
+	Language string `json:"language"`
+}
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	accessKeyId := os.Getenv("R2_ACCESS_KEY_ID")
+	accessKeySecret := os.Getenv("R2_ACCESS_KEY_SECRET")
+	accountId := os.Getenv("R2_ACCOUNT_ID")
+	r2Bucket := os.Getenv("R2_BUCKET")
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKeyId, accessKeySecret, "")),
+		config.WithRegion("auto"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountId))
+	})
+
+	deps := &ServerDeps{
+		S3Client: client,
+		Bucket:   r2Bucket,
+	}
+
 	router := mux.NewRouter()
 
-	router.HandleFunc("/games", getGamesHandler).Methods("GET")
-	router.HandleFunc("/games/{game_id}/rules", getRulesHandler).Methods("GET")
+	router.HandleFunc("/games/languages", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]string{"en", "fr"})
+	}).Methods("GET")
+
+	router.HandleFunc("/games", deps.getGamesHandler).Methods("GET")
+	router.HandleFunc("/games/{game_id}/rules", deps.getRulesHandler).Methods("GET")
 
 	fmt.Printf("port running on http://localhost:8081/\n")
 	if err := http.ListenAndServe("0.0.0.0:8081", handlers.CORS()(router)); err != nil {
@@ -48,14 +101,14 @@ func main() {
 	}
 }
 
-type GameResult struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-	Link string `json:"link"`
-}
-
-func getGamesHandler(w http.ResponseWriter, r *http.Request) {
+func (d *ServerDeps) getGamesHandler(w http.ResponseWriter, r *http.Request) {
 	search := r.URL.Query().Get("search")
+	language := r.URL.Query().Get("language")
+
+	if language == "" {
+		language = "en"
+	}
+
 	if search == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -79,20 +132,54 @@ func getGamesHandler(w http.ResponseWriter, r *http.Request) {
 
 	var results []GameResult
 
-	selector, err := cascadia.Compile("a.dark-link")
+	colCenterSelector, err := cascadia.Compile("div.col-center")
 	if err != nil {
 		http.Error(w, "Failed to compile CSS selector", http.StatusInternalServerError)
 		return
 	}
 
-	nodes := cascadia.QueryAll(root, selector)
+	colCenters := cascadia.QueryAll(root, colCenterSelector)
 
-	for _, node := range nodes {
-		name := getTextContent(node)
-		href := getAttr(node, "href")
+	for _, colCenter := range colCenters {
+		darkLinkSelector, err := cascadia.Compile("a.dark-link")
+		if err != nil {
+			continue
+		}
+		aDarkLink := cascadia.Query(colCenter, darkLinkSelector)
+		if aDarkLink == nil {
+			continue
+		}
+		name := getTextContent(aDarkLink)
+		href := getAttr(aDarkLink, "href")
+
 		if href == "" {
 			continue
 		}
+
+		// if language is french, get french link instead
+		if language == "fr" {
+			frenchPDF, err := cascadia.Compile("a[title=\"In French\"]")
+			if err != nil {
+				http.Error(w, "Failed to compile CSS selector", http.StatusInternalServerError)
+				return
+			}
+
+			frenchLink := cascadia.Query(colCenter, frenchPDF)
+			if frenchLink == nil {
+				continue
+			}
+			frenchHref := getAttr(frenchLink, "href")
+			if frenchHref == "" {
+				continue
+			}
+			href = frenchHref
+		}
+
+		if href == "" {
+			continue
+		}
+
+		// validate pdf link and add to result
 		if len(href) >= 4 && href[len(href)-4:] == ".pdf" {
 			id := name
 			id = strings.ToLower(id)
@@ -107,12 +194,17 @@ func getGamesHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			id = string(idRunes)
 
-			gameIdToPDF[id] = href
+			if _, ok := gameIdToLinks[id]; !ok {
+				gameIdToLinks[id] = make(map[string]string)
+			}
+
+			gameIdToLinks[id][language] = href
 
 			results = append(results, GameResult{
-				Id:   id,
-				Name: strings.TrimSpace(name),
-				Link: href,
+				Id:       id,
+				Name:     strings.TrimSpace(name),
+				Link:     href,
+				Language: language,
 			})
 		}
 	}
@@ -122,23 +214,78 @@ func getGamesHandler(w http.ResponseWriter, r *http.Request) {
 	enc.Encode(results)
 }
 
-func getRulesHandler(w http.ResponseWriter, r *http.Request) {
+func (d *ServerDeps) getRulesHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	gameId := vars["game_id"]
-	link, ok := gameIdToPDF[gameId]
-	if !ok {
-		http.Error(w, "Game not found", http.StatusNotFound)
+	language := r.URL.Query().Get("language")
+	if language == "" {
+		language = "en"
+	}
+
+	filename := fmt.Sprintf("%s-%s.pdf", gameId, language)
+
+	// Safely access nested map
+	gameIdLower := strings.ToLower(gameId)
+	langMap, exists := gameIdToLinks[gameIdLower]
+	var href string
+	var ok bool
+	if exists {
+		href, ok = langMap[language]
+	}
+
+	getResp, err := d.S3Client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(d.Bucket),
+		Key:    aws.String(filename),
+	})
+
+	// object doesn't exist in s3
+	if err != nil {
+		if !ok || href == "" {
+			http.Error(w, "Game/PDF not found in memory map or storage", http.StatusNotFound)
+			return
+		}
+
+		resp, err := http.Get(href)
+		if err != nil {
+			fmt.Printf("Failed to download PDF: %v\n", err)
+			return
+		}
+
+		pdfData, err := io.ReadAll(resp.Body)
+		resp.Body.Close() // Close immediately after reading
+		if err != nil {
+			http.Error(w, "Failed to read PDF", http.StatusInternalServerError)
+			return
+		}
+
+		go func(gameId, language, filename string, pdfData []byte) {
+			_, uploadErr := d.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+				Bucket:      aws.String(d.Bucket),
+				Key:         aws.String(filename),
+				Body:        bytes.NewReader(pdfData),
+				ContentType: aws.String("application/pdf"),
+				ACL:         types.ObjectCannedACLPublicRead, // Or omit if not needed
+			})
+			if uploadErr != nil {
+				fmt.Printf("Failed to upload PDF to R2: %v\n", uploadErr)
+				return
+			}
+
+			fmt.Printf("Background PDF upload complete for %s\n", filename)
+		}(gameId, language, filename, pdfData)
+
+		// Serve the PDF immediately
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+		w.WriteHeader(http.StatusOK)
+		w.Write(pdfData)
+
 		return
 	}
 
-	resp, err := http.Get(link)
-	if err != nil {
-		http.Error(w, "Failed to fetch PDF", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
+	defer getResp.Body.Close()
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s.pdf\"", gameId))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
 	w.WriteHeader(http.StatusOK)
-	_, _ = io.Copy(w, resp.Body)
+	_, _ = io.Copy(w, getResp.Body)
 }

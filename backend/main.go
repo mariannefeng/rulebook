@@ -251,7 +251,7 @@ func (d *ServerDeps) getRulesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		pdfData, err := io.ReadAll(resp.Body)
-		resp.Body.Close() // Close immediately after reading
+		resp.Body.Close()
 		if err != nil {
 			http.Error(w, "Failed to read PDF", http.StatusInternalServerError)
 			return

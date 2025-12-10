@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useContext, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useWindowWidth } from "@wojtekmaj/react-hooks";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -8,6 +8,7 @@ import "react-pdf/dist/Page/TextLayer.css";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { Icon } from "@iconify/react";
 import BasePage from "../components/BasePage";
+import SettingsContext from "../contexts/SettingsContext";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -19,6 +20,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
 function Rulebook() {
   const width = useWindowWidth() ?? 1;
   const [search, setSearch] = useState("");
+  const { language } = useContext(SettingsContext);
 
   const { gameId } = useParams<{ gameId: string }>();
   const [numPages, setNumPages] = useState<number>();
@@ -27,7 +29,7 @@ function Rulebook() {
   const [loadComplete, setLoadComplete] = useState(false);
   const [highlightSearch, setHighlightSearch] = useState(false);
 
-  const pdfUrl = `${apiUrl}/games/${gameId}/rules`;
+  const pdfUrl = `${apiUrl}/games/${gameId}/rules?language=${language}`;
 
   function onDocumentLoadSuccess({ numPages: nextNumPages }: PDFDocumentProxy) {
     setLoadComplete(true);

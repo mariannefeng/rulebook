@@ -7,8 +7,9 @@
 
 todo:
 
+- add health check endpoint
 - add swagger
-- setup cron to continuously keep render server alive
+- setup cron or something to keep server continuously alive?
 
 done:
 
@@ -26,15 +27,15 @@ general gist:
 
 todo:
 
-- save settings to local storage
 - optional to download to phone to avoid server at all (offline support)
 - add 3 other colors
-- add language to settings
 - keyboard shortcut
 
 done:
 
 - setting to configure theming color across the board
+- add language to settings
+- save settings to local storage
 - loading
 - homepage: game search
 - mobile friendly (should scale down accordingly)

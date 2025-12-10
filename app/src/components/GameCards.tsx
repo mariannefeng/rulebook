@@ -7,11 +7,13 @@ export function GameCards({
   games,
   onCardClick,
   cardClassName,
+  titleClassName,
 }: {
   label: string;
   games: Game[];
   onCardClick: (game: Game) => void;
   cardClassName?: string;
+  titleClassName?: string;
 }) {
   const navigate = useNavigate();
 
@@ -38,7 +40,9 @@ export function GameCards({
                 className={`cursor-pointer h-full flex justify-center ${cardClassName}`}
               >
                 <Card.Header>
-                  <Card.Title className="text-lg">{game.name}</Card.Title>
+                  <Card.Title className={`text-lg ${titleClassName}`}>
+                    {game.name}
+                  </Card.Title>
                 </Card.Header>
               </Card>
             </div>

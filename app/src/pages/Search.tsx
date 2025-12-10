@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Input } from "@heroui/react";
+import { Button, Input, Spinner } from "@heroui/react";
 import { GameCards } from "../components/GameCards";
 
 const apiUrl = import.meta.env.VITE_API_URL;
@@ -19,14 +19,18 @@ const getRecent = () => {
 function Search() {
   const [search, setSearch] = useState("");
   const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(false);
   const [recents] = useState<Game[]>(() => {
     return getRecent();
   });
 
   const searchGame = () => {
+    setLoading(true);
+
     fetch(`${apiUrl}/games?search=${search}`)
       .then((response) => response.json())
       .then((data) => {
+        setLoading(false);
         console.log("data response", data);
         setGames(data);
       })
@@ -49,8 +53,8 @@ function Search() {
   };
 
   return (
-    <div className="flex flex-col gap-10 p-5">
-      <div className="flex gap-5">
+    <div className="flex flex-col gap-10 p-5 items-center w-full">
+      <div className="flex gap-5 w-full">
         <Input
           className="w-full"
           aria-label="Search"
@@ -65,11 +69,13 @@ function Search() {
       {recents.length > 0 && (
         <GameCards
           label="Recently viewed"
-          cardClassName="bg-blue-200"
+          cardClassName="bg-primary"
+          titleClassName="text-white"
           games={recents}
           onCardClick={handleCardClick}
         />
       )}
+      {loading && <Spinner size="xl" />}
       {games.length > 0 && (
         <GameCards label="Search" games={games} onCardClick={handleCardClick} />
       )}

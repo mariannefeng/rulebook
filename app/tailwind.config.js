@@ -1,5 +1,5 @@
 // tailwind.config.js
-const { heroui } = require("@heroui/theme");
+const { heroui, colors } = require("@heroui/theme");
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -7,9 +7,7 @@ module.exports = {
     "./node_modules/@heroui/theme/dist/components/input.js",
     "./node_modules/@heroui/theme/dist/components/(input|form).js",
   ],
-  theme: {
-    extend: {},
-  },
+  theme: {},
   darkMode: "class",
   plugins: [heroui()],
 };

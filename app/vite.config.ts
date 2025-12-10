@@ -11,7 +11,7 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "Rulebook: Board Game Rules",
+        name: "Rulebook",
         short_name: "Rulebook",
         description: "Search and find all board game rulebooks",
         theme_color: "#ffffff",

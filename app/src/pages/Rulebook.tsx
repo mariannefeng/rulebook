@@ -23,26 +23,36 @@ function Rulebook() {
   const [numPages, setNumPages] = useState<number>();
   const [error, setError] = useState<string | null>(null);
   const [currSearchIdx, setCurrSearchIdx] = useState(0);
+  const [loadComplete, setLoadComplete] = useState(false);
+  const [highlightSearch, setHighlightSearch] = useState(false);
 
   const pdfUrl = `${apiUrl}/games/${gameId}/rules`;
 
   function onDocumentLoadSuccess({ numPages: nextNumPages }: PDFDocumentProxy) {
+    setLoadComplete(true);
     setError(null);
     setNumPages(nextNumPages);
   }
 
   function onDocumentLoadError(error: Error) {
+    setLoadComplete(true);
     setError(`Failed to load PDF: ${error.message}`);
   }
 
   const textRenderer = useCallback(
     (textItem: { str: string }) => {
+      if (!highlightSearch) {
+        return textItem.str;
+      }
+
       return textItem.str.replace(search, (value) => `<mark>${value}</mark>`);
     },
-    [search]
+    [search, highlightSearch]
   );
 
   const searchText = () => {
+    setHighlightSearch(true);
+
     const marks = document.querySelectorAll("mark");
     if (marks.length > 0) {
       marks.forEach((mark) => {
@@ -64,6 +74,12 @@ function Rulebook() {
     }
   };
 
+  const resetSearch = () => {
+    setSearch("");
+    setHighlightSearch(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div>
       <div className="flex gap-5 sticky top-0 z-100 py-5 px-5">
@@ -83,10 +99,7 @@ function Rulebook() {
                 aria-label="Search"
                 size="sm"
                 variant="ghost"
-                onPress={() => {
-                  setSearch("");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
+                onPress={resetSearch}
               >
                 <Icon icon="gravity-ui:circle-letter-x" />
               </Button>
@@ -101,12 +114,13 @@ function Rulebook() {
 
       <div>
         {error && <div className="text-red-500 text-center">{error}</div>}
+        {!loadComplete && <div className="text-center">Loading...</div>}
         <Document
           file={pdfUrl}
           className="flex flex-col items-center gap-5"
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}
-          loading={<div>Loading PDF...</div>}
+          loading=""
           error={
             <div className="text-red-500">
               Failed to load PDF. Please check if the file exists.

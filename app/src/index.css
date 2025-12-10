@@ -12,3 +12,7 @@ html {
 mark.current-match {
   background-color: orange;
 }
+
+.bg-primary {
+  background-color: var(--accent);
+}

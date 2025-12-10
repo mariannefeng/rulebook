@@ -24,7 +24,7 @@ export function GameCards({
   };
 
   return (
-    <div>
+    <div className="w-full">
       <h2 className="pb-4">{label}</h2>
 
       <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">

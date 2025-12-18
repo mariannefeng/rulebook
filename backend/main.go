@@ -15,6 +15,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/iris-contrib/middleware/cors"
 	"github.com/iris-contrib/swagger"
 	"github.com/iris-contrib/swagger/swaggerFiles"
 	_ "github.com/mariannefeng/rulebook/backend-go/docs"
@@ -90,6 +91,15 @@ func main() {
 	}
 
 	app := iris.New()
+
+	// Enable CORS
+	crs := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"}, // Allow all origins
+		AllowCredentials: true,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+	})
+	app.UseRouter(crs)
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountId))

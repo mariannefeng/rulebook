@@ -7,13 +7,14 @@
 
 todo:
 
-- make available at api.rule-book.org
 - add health check endpoint
-- add swagger
+- incorporate swagger into build process
 - setup cron or something to keep server continuously alive?
 
 done:
 
+- make available at api.rule-book.org
+- add swagger
 - use cloudflare R2 for pdf storage
 - support for different languages (en + fr, GET languages)
 - implement backend in golang

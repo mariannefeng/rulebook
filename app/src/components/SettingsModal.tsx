@@ -28,7 +28,7 @@ function SettingsModal() {
         return resp.json();
       })
       .then((data) => {
-        setLanguages(data);
+        setLanguages(data.languages || []);
       })
       .catch((err) => {
         console.error("Error fetching languages:", err);

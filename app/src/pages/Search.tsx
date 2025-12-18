@@ -35,7 +35,7 @@ function Search() {
       .then((data) => {
         setLoading(false);
         console.log("data response", data);
-        setGames(data);
+        setGames(data.results || []);
       })
       .catch((error) => {
         console.log("errrrr", error);

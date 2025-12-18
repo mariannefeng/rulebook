@@ -1,9 +1,13 @@
+// @title           Rulebook API
+// @version         1.0
+// @description     API for searching and retrieving game rulebooks
+// @host            localhost:8080
+// @BasePath        /
 package main
 
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -11,15 +15,18 @@ import (
 	"os"
 	"strings"
 
+	"github.com/iris-contrib/swagger"
+	"github.com/iris-contrib/swagger/swaggerFiles"
+	_ "github.com/mariannefeng/rulebook/backend-go/docs"
+
 	"github.com/andybalholm/cascadia"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/kataras/iris/v12"
 	"golang.org/x/net/html"
 )
 
@@ -45,16 +52,23 @@ func getAttr(n *html.Node, key string) string {
 
 var gameIdToLinks = make(map[string]map[string]string) // map[gameId][language] = PDF link
 
-type ServerDeps struct {
-	S3Client *s3.Client
-	Bucket   string
-}
-
 type GameResult struct {
 	Id       string `json:"id"`
 	Name     string `json:"name"`
 	Link     string `json:"link"`
 	Language string `json:"language"`
+}
+
+type LanguagesResponse struct {
+	Languages []string `json:"languages"`
+}
+
+type GamesResponse struct {
+	Results []GameResult `json:"results"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error"`
 }
 
 func main() {
@@ -75,57 +89,97 @@ func main() {
 		log.Fatal(err)
 	}
 
+	app := iris.New()
+
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountId))
 	})
 
-	deps := &ServerDeps{
-		S3Client: client,
-		Bucket:   r2Bucket,
+	swaggerUI := swagger.Handler(swaggerFiles.Handler,
+		swagger.URL("/swagger/doc.json"),
+		swagger.DeepLinking(true),
+		swagger.Prefix("/swagger"),
+	)
+
+	app.Get("/swagger", swaggerUI)
+	app.Get("/swagger/{any:path}", swaggerUI)
+
+	gamesAPI := app.Party("/games")
+	{
+		gamesAPI.Use(iris.Compression)
+		gamesAPI.Use(func(ctx iris.Context) {
+			ctx.Values().Set("s3Client", client)
+			ctx.Values().Set("bucket", r2Bucket)
+			ctx.Next()
+		})
+
+		gamesAPI.Get("/", getGames)
+		gamesAPI.Get("/{game_id}/rules", getRules)
+		gamesAPI.Get("/languages", getLanguages)
 	}
 
-	router := mux.NewRouter()
-
-	router.HandleFunc("/games/languages", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]string{"en", "fr"})
-	}).Methods("GET")
-
-	router.HandleFunc("/games", deps.getGamesHandler).Methods("GET")
-	router.HandleFunc("/games/{game_id}/rules", deps.getRulesHandler).Methods("GET")
-
-	fmt.Printf("port running on http://localhost:8081/\n")
-	if err := http.ListenAndServe("0.0.0.0:8081", handlers.CORS()(router)); err != nil {
-		log.Fatal(err)
-	}
+	fmt.Printf("port running on http://localhost:8080/\n")
+	app.Listen(":8080")
 }
 
-func (d *ServerDeps) getGamesHandler(w http.ResponseWriter, r *http.Request) {
-	search := r.URL.Query().Get("search")
-	language := r.URL.Query().Get("language")
+// @Summary      Get available languages
+// @Description  Returns a list of supported languages for game rulebooks
+// @Tags         languages
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  LanguagesResponse
+// @Router       /games/languages [get]
+func getLanguages(ctx iris.Context) {
+	ctx.JSON(iris.Map{"languages": []string{"en", "fr"}})
+}
+
+type GetGamesRequest struct {
+	Search   string `url:"search"`
+	Language string `url:"language"`
+}
+
+// @Summary      Search for games
+// @Description  Search for game rulebooks by name. Returns a list of matching games with their PDF links.
+// @Tags         games
+// @Accept       json
+// @Produce      json
+// @Param        search    query     string  true   "Search query"
+// @Param        language  query     string  false  "Language code (en or fr)" default(en)
+// @Success      200       {object}  GamesResponse
+// @Failure      400       {object}  ErrorResponse
+// @Failure      500       {object}  ErrorResponse
+// @Router       /games [get]
+func getGames(ctx iris.Context) {
+	var queryParams GetGamesRequest
+	err := ctx.ReadQuery(&queryParams)
+	if err != nil {
+		ctx.StopWithJSON(iris.StatusBadRequest, iris.Map{"error": err.Error()})
+		return
+	}
+
+	search := queryParams.Search
+	language := queryParams.Language
 
 	if language == "" {
 		language = "en"
 	}
 
 	if search == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("[]"))
+		ctx.StopWithJSON(iris.StatusBadRequest, iris.Map{"error": "Search is required"})
 		return
 	}
 
 	url := fmt.Sprintf("https://en.1jour-1jeu.com/rules/search?q=%s", search)
 	resp, err := http.Get(url)
 	if err != nil {
-		http.Error(w, "Error fetching search results", http.StatusInternalServerError)
+		ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Error fetching search results"})
 		return
 	}
 	defer resp.Body.Close()
 
 	root, err := html.Parse(resp.Body)
 	if err != nil {
-		http.Error(w, "Failed to parse HTML", http.StatusInternalServerError)
+		ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to parse HTML"})
 		return
 	}
 
@@ -133,7 +187,7 @@ func (d *ServerDeps) getGamesHandler(w http.ResponseWriter, r *http.Request) {
 
 	colCenterSelector, err := cascadia.Compile("div.col-center")
 	if err != nil {
-		http.Error(w, "Failed to compile CSS selector", http.StatusInternalServerError)
+		ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to compile CSS selector"})
 		return
 	}
 
@@ -159,7 +213,7 @@ func (d *ServerDeps) getGamesHandler(w http.ResponseWriter, r *http.Request) {
 		if language == "fr" {
 			frenchPDF, err := cascadia.Compile("a[title=\"In French\"]")
 			if err != nil {
-				http.Error(w, "Failed to compile CSS selector", http.StatusInternalServerError)
+				ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to compile CSS selector"})
 				return
 			}
 
@@ -208,62 +262,91 @@ func (d *ServerDeps) getGamesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	enc := json.NewEncoder(w)
-	enc.Encode(results)
+	ctx.JSON(iris.Map{"results": results})
 }
 
-func (d *ServerDeps) getRulesHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	gameId := vars["game_id"]
-	language := r.URL.Query().Get("language")
+type GetRulesRequest struct {
+	Language string `url:"language"`
+}
+
+// @Summary      Get game rules PDF
+// @Description  Retrieve a PDF rulebook for a specific game. The PDF is served from cache if available, otherwise downloaded and cached.
+// @Tags         games
+// @Accept       json
+// @Produce      application/pdf
+// @Param        game_id   path      string  true   "Game ID"
+// @Param        language  query     string  false  "Language code (en or fr)" default(en)
+// @Success      200       {file}    binary  "PDF file"
+// @Failure      400       {object}  ErrorResponse  "Bad request"
+// @Failure      404       {object}  ErrorResponse  "Game not found or language not available"
+// @Failure      500       {object}  ErrorResponse  "Internal server error"
+// @Router       /games/{game_id}/rules [get]
+func getRules(ctx iris.Context) {
+	gameId := ctx.Params().GetString("game_id")
+	if gameId == "" {
+		ctx.StopWithJSON(iris.StatusBadRequest, iris.Map{"error": "game_id is required"})
+		return
+	}
+
+	var queryParams GetRulesRequest
+	ctx.ReadQuery(&queryParams)
+	language := queryParams.Language
 	if language == "" {
 		language = "en"
 	}
 
-	filename := fmt.Sprintf("%s-%s.pdf", gameId, language)
-
-	// Safely access nested map
-	gameIdLower := strings.ToLower(gameId)
-	langMap, exists := gameIdToLinks[gameIdLower]
-	var href string
-	var ok bool
-	if exists {
-		href, ok = langMap[language]
+	// Get dependencies from context
+	s3Client, ok1 := ctx.Values().Get("s3Client").(*s3.Client)
+	bucket, ok2 := ctx.Values().Get("bucket").(string)
+	if !ok1 || !ok2 {
+		ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Server configuration error"})
+		return
 	}
 
-	getResp, err := d.S3Client.GetObject(context.TODO(), &s3.GetObjectInput{
-		Bucket: aws.String(d.Bucket),
+	// Check if game exists in memory map
+	gameLinks, ok := gameIdToLinks[gameId]
+	if !ok {
+		ctx.StopWithJSON(iris.StatusNotFound, iris.Map{"error": "Game not found"})
+		return
+	}
+
+	href, ok := gameLinks[language]
+	if !ok {
+		ctx.StopWithJSON(iris.StatusNotFound, iris.Map{"error": "Language not available for this game"})
+		return
+	}
+
+	filename := fmt.Sprintf("%s-%s.pdf", gameId, language)
+
+	reqCtx := ctx.Request().Context()
+	getResp, err := s3Client.GetObject(reqCtx, &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
 		Key:    aws.String(filename),
 	})
 
-	// object doesn't exist in s3
+	// object doesn't exist in s3, download
 	if err != nil {
-		if !ok || href == "" {
-			http.Error(w, "Game/PDF not found in memory map or storage", http.StatusNotFound)
-			return
-		}
-
 		resp, err := http.Get(href)
 		if err != nil {
-			fmt.Printf("Failed to download PDF: %v\n", err)
+			ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to download PDF"})
 			return
 		}
+		defer resp.Body.Close()
 
 		pdfData, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
 		if err != nil {
-			http.Error(w, "Failed to read PDF", http.StatusInternalServerError)
+			ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to read PDF"})
 			return
 		}
 
+		// Upload to S3 in background
 		go func(gameId, language, filename string, pdfData []byte) {
-			_, uploadErr := d.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-				Bucket:      aws.String(d.Bucket),
+			_, uploadErr := s3Client.PutObject(context.Background(), &s3.PutObjectInput{
+				Bucket:      aws.String(bucket),
 				Key:         aws.String(filename),
 				Body:        bytes.NewReader(pdfData),
 				ContentType: aws.String("application/pdf"),
-				ACL:         types.ObjectCannedACLPublicRead, // Or omit if not needed
+				ACL:         types.ObjectCannedACLPublicRead,
 			})
 			if uploadErr != nil {
 				fmt.Printf("Failed to upload PDF to R2: %v\n", uploadErr)
@@ -273,18 +356,16 @@ func (d *ServerDeps) getRulesHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("Background PDF upload complete for %s\n", filename)
 		}(gameId, language, filename, pdfData)
 
-		// Serve the PDF immediately
-		w.Header().Set("Content-Type", "application/pdf")
-		w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
-		w.WriteHeader(http.StatusOK)
-		w.Write(pdfData)
-
+		ctx.ContentType("application/pdf")
+		ctx.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+		ctx.StatusCode(iris.StatusOK)
+		ctx.Write(pdfData)
 		return
 	}
 
 	defer getResp.Body.Close()
-	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
-	w.WriteHeader(http.StatusOK)
-	_, _ = io.Copy(w, getResp.Body)
+	ctx.ContentType("application/pdf")
+	ctx.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+	ctx.StatusCode(iris.StatusOK)
+	io.Copy(ctx.ResponseWriter(), getResp.Body)
 }

@@ -7,6 +7,7 @@
 
 todo:
 
+- make available at api.rule-book.org
 - add health check endpoint
 - add swagger
 - setup cron or something to keep server continuously alive?
@@ -27,12 +28,17 @@ general gist:
 
 todo:
 
-- fix settings dropdown weird flicker
+- trasparent gray background for images on PDFs
+- disable posthog recording when running locally
+- add button to save page as app to desktop
+- fix settings dropdown weird flicker on desktop
+- tap to clear input not working on mobile
 - allow zoom on pdf screen
 - keyboard shortcut
 
 done:
 
+- buy a domain
 - add ability to move action buttons to the left or right
 - add back button
 - hide pdf search until pdf loads

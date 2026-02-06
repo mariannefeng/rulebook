@@ -14,6 +14,9 @@ RUN go mod download
 # Copy source code
 COPY . .
 
+# Generate Swagger docs (run the swag generator; same module already in go.mod)
+RUN go run github.com/swaggo/swag/cmd/swag@v1.8.10 init
+
 # Build the Go app
 RUN go build -o backend main.go
 

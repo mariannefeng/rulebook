@@ -1,7 +1,7 @@
-// @title           Rulebook API
+// @title           Board Game Rulebook API
 // @version         1.0
-// @description     API for searching and retrieving game rulebooks
-// @host            localhost:8080
+// @description     API for searching and retrieving board game rulebooks
+// @host            api.rule-book.org
 // @BasePath        /
 package main
 

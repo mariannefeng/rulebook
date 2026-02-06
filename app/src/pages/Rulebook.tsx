@@ -1,4 +1,5 @@
 import { useCallback, useContext, useState } from "react";
+import { Helmet } from "react-helmet";
 import { useParams } from "react-router-dom";
 import { useWindowWidth } from "@wojtekmaj/react-hooks";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -9,10 +10,12 @@ import type { PDFDocumentProxy } from "pdfjs-dist";
 import { Icon } from "@iconify/react";
 import BasePage from "../components/BasePage";
 import SettingsContext from "../contexts/SettingsContext";
+import { getRecentGames } from "../libs/localStorage";
+import type { Game } from "../libs/types";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
+  import.meta.url,
 ).toString();
 
 const apiUrl = import.meta.env.VITE_API_URL;
@@ -30,6 +33,9 @@ function Rulebook() {
   const [highlightSearch, setHighlightSearch] = useState(false);
 
   const pdfUrl = `${apiUrl}/games/${gameId}/rules?language=${language}`;
+
+  const gameName =
+    getRecentGames().find((g: Game) => g.id === gameId)?.name ?? gameId;
 
   function onDocumentLoadSuccess({ numPages: nextNumPages }: PDFDocumentProxy) {
     setLoadComplete(true);
@@ -50,7 +56,7 @@ function Rulebook() {
 
       return textItem.str.replace(search, (value) => `<mark>${value}</mark>`);
     },
-    [search, highlightSearch]
+    [search, highlightSearch],
   );
 
   const searchText = () => {
@@ -85,6 +91,9 @@ function Rulebook() {
 
   return (
     <BasePage showBackButton={true}>
+      <Helmet>
+        <title>{gameName}</title>
+      </Helmet>
       {!error && loadComplete && (
         <div className="flex gap-5 sticky top-0 z-100 py-5 px-5">
           <InputGroup className="w-full">
@@ -120,6 +129,7 @@ function Rulebook() {
       <div>
         {error && <div className="text-red-500 text-center">{error}</div>}
         {!loadComplete && <div className="text-center">Loading...</div>}
+
         <Document
           file={pdfUrl}
           className="flex flex-col items-center gap-5"

@@ -1,5 +1,5 @@
 import { Card } from "@heroui/react";
-import type { Game } from "../pages/Search";
+import type { Game } from "../libs/types";
 import { useNavigate } from "react-router-dom";
 
 export function GameCards({

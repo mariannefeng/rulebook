@@ -3,20 +3,10 @@ import { Button, Input, Spinner } from "@heroui/react";
 import { GameCards } from "../components/GameCards";
 import BasePage from "../components/BasePage";
 import SettingsContext from "../contexts/SettingsContext";
+import { getRecentGames, setRecentGames } from "../libs/localStorage";
+import type { Game } from "../libs/types";
 
 const apiUrl = import.meta.env.VITE_API_URL;
-const STORAGE_KEY = "rulebook";
-
-export type Game = {
-  id: string;
-  name: string;
-};
-
-const getRecent = () => {
-  const data = localStorage.getItem(STORAGE_KEY);
-  const recentGames = data ? JSON.parse(data) : [];
-  return recentGames;
-};
 
 function Search() {
   const { language } = useContext(SettingsContext);
@@ -24,7 +14,7 @@ function Search() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [recents] = useState<Game[]>(() => {
-    return getRecent();
+    return getRecentGames();
   });
 
   const searchGame = () => {
@@ -43,7 +33,7 @@ function Search() {
   };
 
   const handleCardClick = (game: Game) => {
-    const recentGames = getRecent();
+    const recentGames = getRecentGames();
 
     const filteredGames = recentGames.filter((g: Game) => g.id !== game.id);
 
@@ -52,7 +42,7 @@ function Search() {
       name: game.name,
     });
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredGames));
+    setRecentGames(filteredGames);
   };
 
   return (

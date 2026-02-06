@@ -106,7 +106,7 @@ func main() {
 	})
 
 	swaggerUI := swagger.Handler(swaggerFiles.Handler,
-		swagger.URL("/swagger/doc.json"),
+		swagger.URL("/swagger/swagger.json"),
 		swagger.DeepLinking(true),
 		swagger.Prefix("/swagger"),
 	)
@@ -313,6 +313,30 @@ func getRules(ctx iris.Context) {
 		return
 	}
 
+	filename := fmt.Sprintf("%s-%s.pdf", gameId, language)
+
+	reqCtx := ctx.Request().Context()
+	getResp, err := s3Client.GetObject(reqCtx, &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(filename),
+	})
+
+	// pdf exists in s3, serve from s3
+	if err == nil {
+		pdfData, err := io.ReadAll(getResp.Body)
+		if err != nil {
+			ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to read PDF"})
+			return
+		}
+		defer getResp.Body.Close()
+
+		ctx.ContentType("application/pdf")
+		ctx.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+		ctx.StatusCode(iris.StatusOK)
+		ctx.Write(pdfData)
+		return
+	}
+
 	// Check if game exists in memory map
 	gameLinks, ok := gameIdToLinks[gameId]
 	if !ok {
@@ -326,56 +350,39 @@ func getRules(ctx iris.Context) {
 		return
 	}
 
-	filename := fmt.Sprintf("%s-%s.pdf", gameId, language)
-
-	reqCtx := ctx.Request().Context()
-	getResp, err := s3Client.GetObject(reqCtx, &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(filename),
-	})
-
 	// object doesn't exist in s3, download
+	resp, err := http.Get(href)
 	if err != nil {
-		resp, err := http.Get(href)
-		if err != nil {
-			ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to download PDF"})
-			return
-		}
-		defer resp.Body.Close()
+		ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to download PDF"})
+		return
+	}
+	defer resp.Body.Close()
 
-		pdfData, err := io.ReadAll(resp.Body)
-		if err != nil {
-			ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to read PDF"})
-			return
-		}
-
-		// Upload to S3 in background
-		go func(gameId, language, filename string, pdfData []byte) {
-			_, uploadErr := s3Client.PutObject(context.Background(), &s3.PutObjectInput{
-				Bucket:      aws.String(bucket),
-				Key:         aws.String(filename),
-				Body:        bytes.NewReader(pdfData),
-				ContentType: aws.String("application/pdf"),
-				ACL:         types.ObjectCannedACLPublicRead,
-			})
-			if uploadErr != nil {
-				fmt.Printf("Failed to upload PDF to R2: %v\n", uploadErr)
-				return
-			}
-
-			fmt.Printf("Background PDF upload complete for %s\n", filename)
-		}(gameId, language, filename, pdfData)
-
-		ctx.ContentType("application/pdf")
-		ctx.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
-		ctx.StatusCode(iris.StatusOK)
-		ctx.Write(pdfData)
+	pdfData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to read PDF"})
 		return
 	}
 
-	defer getResp.Body.Close()
+	// Upload to S3 in background
+	go func(gameId, language, filename string, pdfData []byte) {
+		_, uploadErr := s3Client.PutObject(context.Background(), &s3.PutObjectInput{
+			Bucket:      aws.String(bucket),
+			Key:         aws.String(filename),
+			Body:        bytes.NewReader(pdfData),
+			ContentType: aws.String("application/pdf"),
+			ACL:         types.ObjectCannedACLPublicRead,
+		})
+		if uploadErr != nil {
+			fmt.Printf("Failed to upload PDF to R2: %v\n", uploadErr)
+			return
+		}
+
+		fmt.Printf("Background PDF upload complete for %s\n", filename)
+	}(gameId, language, filename, pdfData)
+
 	ctx.ContentType("application/pdf")
 	ctx.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
 	ctx.StatusCode(iris.StatusOK)
-	io.Copy(ctx.ResponseWriter(), getResp.Body)
+	ctx.Write(pdfData)
 }

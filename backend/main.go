@@ -13,7 +13,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/iris-contrib/middleware/cors"
 	"github.com/iris-contrib/swagger"
@@ -70,6 +72,45 @@ type GamesResponse struct {
 
 type ErrorResponse struct {
 	Error string `json:"error"`
+}
+
+// pdfContainsJPX reports whether the PDF contains JPEG2000 (JPX) image streams.
+// Such PDFs can fail to render in pdf.js due to OpenJPEG decoder issues.
+func pdfContainsJPX(pdfData []byte) bool {
+	return bytes.Contains(pdfData, []byte("JPXDecode")) || bytes.Contains(pdfData, []byte("/JPX"))
+}
+
+// rewritePDFWithGhostscript runs the equivalent of:
+//
+//	gs -sDEVICE=pdfwrite -dPDFSETTINGS=/ebook -dCompatibilityLevel=1.4 \
+//	   -dNOPAUSE -dBATCH -dDetectDuplicateImages=true \
+//	   -sOutputFile=- -
+//
+// using the gs binary: PDF bytes in via stdin, rewritten PDF bytes out via stdout.
+// No temp files; all in memory. Requires Ghostscript installed (e.g. apt-get install ghostscript).
+func rewritePDFWithGhostscript(ctx context.Context, pdfData []byte) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "gs",
+		"-sDEVICE=pdfwrite",
+		"-dPDFSETTINGS=/ebook",
+		"-dCompatibilityLevel=1.4",
+		"-dNOPAUSE", "-dBATCH",
+		"-dDetectDuplicateImages=true",
+		"-dQUIET",
+		"-sOutputFile=-",
+		"-",
+	)
+	cmd.Stdin = bytes.NewReader(pdfData)
+	var out, errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("gs: %w (stderr: %s)", err, errOut.String())
+	}
+	return out.Bytes(), nil
 }
 
 func main() {
@@ -314,27 +355,34 @@ func getRules(ctx iris.Context) {
 	}
 
 	filename := fmt.Sprintf("%s-%s.pdf", gameId, language)
-
 	reqCtx := ctx.Request().Context()
-	getResp, err := s3Client.GetObject(reqCtx, &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(filename),
-	})
 
-	// pdf exists in s3, serve from s3
-	if err == nil {
-		pdfData, err := io.ReadAll(getResp.Body)
-		if err != nil {
-			ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to read PDF"})
+	skipCache := os.Getenv("SKIP_CACHE") == "true"
+
+	if !skipCache {
+		fmt.Printf("Checking if PDF exists in S3...\n")
+
+		getResp, err := s3Client.GetObject(reqCtx, &s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(filename),
+		})
+
+		// pdf exists in s3, serve from s3
+		if err == nil && getResp != nil {
+			fmt.Printf("PDF exists in S3, serving from S3...\n")
+			pdfData, err := io.ReadAll(getResp.Body)
+			if err != nil {
+				ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to read PDF"})
+				return
+			}
+			defer getResp.Body.Close()
+
+			ctx.ContentType("application/pdf")
+			ctx.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+			ctx.StatusCode(iris.StatusOK)
+			ctx.Write(pdfData)
 			return
 		}
-		defer getResp.Body.Close()
-
-		ctx.ContentType("application/pdf")
-		ctx.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
-		ctx.StatusCode(iris.StatusOK)
-		ctx.Write(pdfData)
-		return
 	}
 
 	// Check if game exists in memory map
@@ -366,7 +414,22 @@ func getRules(ctx iris.Context) {
 
 	// Upload to S3 in background
 	go func(gameId, language, filename string, pdfData []byte) {
-		_, uploadErr := s3Client.PutObject(context.Background(), &s3.PutObjectInput{
+		jobContext := context.Background()
+
+		// Re-encode PDF if it contains JPEG2000 (JPX) so it displays in pdf.js before storing in R2
+		if pdfContainsJPX(pdfData) {
+			fmt.Printf("PDF contains JPX, rewriting...\n")
+			rewritten, err := rewritePDFWithGhostscript(jobContext, pdfData)
+			if err != nil {
+				log.Printf("PDF rewrite (JPX→JPEG) skipped for %s: %v", filename, err)
+			} else {
+				pdfData = rewritten
+			}
+		} else {
+			fmt.Printf("PDF does not contain JPX, skipping so you better be fast\n")
+		}
+
+		_, uploadErr := s3Client.PutObject(jobContext, &s3.PutObjectInput{
 			Bucket:      aws.String(bucket),
 			Key:         aws.String(filename),
 			Body:        bytes.NewReader(pdfData),

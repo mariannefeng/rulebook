@@ -360,7 +360,7 @@ func getRules(ctx iris.Context) {
 	skipCache := os.Getenv("SKIP_CACHE") == "true"
 
 	if !skipCache {
-		fmt.Printf("Checking if PDF exists in S3...\n")
+		fmt.Printf("Checking if %s exists in S3...\n", filename)
 
 		getResp, err := s3Client.GetObject(reqCtx, &s3.GetObjectInput{
 			Bucket: aws.String(bucket),
@@ -369,7 +369,8 @@ func getRules(ctx iris.Context) {
 
 		// pdf exists in s3, serve from s3
 		if err == nil && getResp != nil {
-			fmt.Printf("PDF exists in S3, serving from S3...\n")
+			fmt.Printf("%s exists in S3, serving from S3...\n", filename)
+
 			pdfData, err := io.ReadAll(getResp.Body)
 			if err != nil {
 				ctx.StopWithJSON(iris.StatusInternalServerError, iris.Map{"error": "Failed to read PDF"})
@@ -418,7 +419,7 @@ func getRules(ctx iris.Context) {
 
 		// Re-encode PDF if it contains JPEG2000 (JPX) so it displays in pdf.js before storing in R2
 		if pdfContainsJPX(pdfData) {
-			fmt.Printf("PDF contains JPX, rewriting...\n")
+			fmt.Printf("%s contains JPX, rewriting...\n", filename)
 			rewritten, err := rewritePDFWithGhostscript(jobContext, pdfData)
 			if err != nil {
 				log.Printf("PDF rewrite (JPX→JPEG) skipped for %s: %v", filename, err)

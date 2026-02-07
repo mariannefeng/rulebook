@@ -425,8 +425,6 @@ func getRules(ctx iris.Context) {
 			} else {
 				pdfData = rewritten
 			}
-		} else {
-			fmt.Printf("PDF does not contain JPX, skipping so you better be fast\n")
 		}
 
 		_, uploadErr := s3Client.PutObject(jobContext, &s3.PutObjectInput{

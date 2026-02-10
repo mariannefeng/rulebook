@@ -1,9 +1,9 @@
 import { useContext, type PropsWithChildren } from "react";
-import SettingsModal from "./SettingsModal";
 import SettingsContext from "../contexts/SettingsContext";
 import { Button } from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { useNavigate } from "react-router-dom";
+import SettingsModal from "./SettingsModal";
 
 function BasePage({
   children,

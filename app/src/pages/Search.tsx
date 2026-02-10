@@ -24,7 +24,6 @@ function Search() {
       .then((response) => response.json())
       .then((data) => {
         setLoading(false);
-        console.log("data response", data);
         setGames(data.results || []);
       })
       .catch((error) => {
@@ -57,6 +56,11 @@ function Search() {
               setSearch(event.target.value);
             }}
             placeholder="Search for a board game"
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && search.length > 0) {
+                searchGame();
+              }
+            }}
           />
           <Button onPress={searchGame}>Search</Button>
         </div>

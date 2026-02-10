@@ -108,6 +108,11 @@ function Rulebook() {
                 setSearch(event.target.value);
               }}
               placeholder="Search for a keyword"
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && search.length > 0) {
+                  searchText();
+                }
+              }}
             />
             {search.length > 0 && (
               <InputGroup.Suffix className="pr-0">

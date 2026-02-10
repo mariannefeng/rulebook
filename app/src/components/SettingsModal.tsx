@@ -1,6 +1,4 @@
-import { Button, Dropdown, Label } from "@heroui/react";
-
-import { Modal } from "@heroui/react";
+import { Button, Dropdown, Label, Modal, useOverlayState } from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { useContext, useEffect, useState } from "react";
 import type { Selection } from "@heroui/react";
@@ -20,6 +18,14 @@ function SettingsModal() {
   } = useContext(SettingsContext);
 
   const [languages, setLanguages] = useState<string[]>([]);
+
+  const overlayState = useOverlayState({
+    defaultOpen: false,
+    onOpenChange: (isOpen) => {
+      // Debug: check in prod console whether trigger click flips state
+      console.log("[SettingsModal] overlay open:", isOpen);
+    },
+  });
 
   useEffect(() => {
     fetch(`${apiUrl}/games/languages`)
@@ -54,7 +60,7 @@ function SettingsModal() {
   };
 
   return (
-    <Modal>
+    <Modal state={overlayState}>
       <Modal.Trigger
         className={`fixed bottom-12 ${
           buttonsPosition === "left" ? "left-12" : "right-12"

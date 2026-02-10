@@ -5,9 +5,6 @@ WORKDIR /app
 # Install git (required for go modules)
 RUN apk add --no-cache git
 
-# Install ghostscript (required for converting PDFs with JPX to JPEG)
-RUN apk add --no-cache ghostscript
-
 # Copy go mod and sum files
 COPY go.mod go.sum ./
 

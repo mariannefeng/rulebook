@@ -6,12 +6,12 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { Button, InputGroup } from "@heroui/react";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import type { PDFDocumentProxy } from "pdfjs-dist";
 import { Icon } from "@iconify/react";
 import BasePage from "../components/BasePage";
 import SettingsContext from "../contexts/SettingsContext";
 import { getRecentGames } from "../libs/localStorage";
 import type { Game } from "../libs/types";
+import type { DocumentCallback } from "react-pdf/dist/shared/types.js";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -19,6 +19,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const apiUrl = import.meta.env.VITE_API_URL;
+
+const documentOptions = {
+  wasmUrl: "/wasm/",
+};
 
 function Rulebook() {
   const width = useWindowWidth() ?? 1;
@@ -37,7 +41,7 @@ function Rulebook() {
   const gameName =
     getRecentGames().find((g: Game) => g.id === gameId)?.name ?? gameId;
 
-  function onDocumentLoadSuccess({ numPages: nextNumPages }: PDFDocumentProxy) {
+  function onDocumentLoadSuccess({ numPages: nextNumPages }: DocumentCallback) {
     setLoadComplete(true);
     setError(null);
     setNumPages(nextNumPages);
@@ -132,6 +136,7 @@ function Rulebook() {
 
         <Document
           file={pdfUrl}
+          options={documentOptions}
           className="flex flex-col items-center gap-5"
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}

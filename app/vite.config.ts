@@ -1,12 +1,29 @@
-import { defineConfig } from "vite";
+import { defineConfig, normalizePath } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
+import path from "path";
+import { viteStaticCopy } from "vite-plugin-static-copy";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+
+const pdfjsDistPath = path.dirname(require.resolve("pdfjs-dist/package.json"));
+const wasmDir = normalizePath(path.join(pdfjsDistPath, "wasm"));
+console.log(pdfjsDistPath, wasmDir);
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    viteStaticCopy({
+      targets: [
+        {
+          src: wasmDir,
+          dest: "",
+        },
+      ],
+    }),
     VitePWA({
       registerType: "autoUpdate",
       workbox: {

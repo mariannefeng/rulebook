@@ -10,6 +10,7 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       workbox: {
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: ({ url }) => {
@@ -20,7 +21,7 @@ export default defineConfig({
             },
             handler: "CacheFirst",
             options: {
-              cacheName: "pdf-cache",
+              cacheName: "pdf-cache-no-jpx",
               expiration: {
                 maxEntries: 50, // Limit number of cached PDFs
                 maxAgeSeconds: 60 * 60 * 24 * 100, // 100 days

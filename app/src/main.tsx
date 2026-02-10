@@ -13,6 +13,8 @@ posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_ID, {
   defaults: "2025-11-30",
 });
 
+console.log(`Rulebook v${__APP_VERSION__} (${__GIT_SHA__})`);
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <PostHogProvider client={posthog}>
@@ -24,5 +26,5 @@ createRoot(document.getElementById("root")!).render(
         </SettingsProvider>
       </HeroUIProvider>
     </PostHogProvider>
-  </StrictMode>
+  </StrictMode>,
 );

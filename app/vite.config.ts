@@ -5,6 +5,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import { createRequire } from "module";
+import { execSync } from "child_process";
 
 const require = createRequire(import.meta.url);
 
@@ -12,7 +13,29 @@ const pdfjsDistPath = path.dirname(require.resolve("pdfjs-dist/package.json"));
 const wasmDir = normalizePath(path.join(pdfjsDistPath, "wasm"));
 console.log(pdfjsDistPath, wasmDir);
 
+function getBuildInfo() {
+  const version =
+    (typeof process.env.npm_package_version === "string" &&
+      process.env.npm_package_version) ||
+    "0.0.0";
+  let sha = process.env.VERCEL_GIT_COMMIT_SHA;
+  if (!sha) {
+    try {
+      sha = execSync("git rev-parse --short HEAD").toString().trim();
+    } catch {
+      sha = "unknown";
+    }
+  } else {
+    sha = sha.slice(0, 7);
+  }
+  return {
+    __APP_VERSION__: JSON.stringify(version),
+    __GIT_SHA__: JSON.stringify(sha),
+  };
+}
+
 export default defineConfig({
+  define: getBuildInfo(),
   plugins: [
     react(),
     tailwindcss(),

@@ -64,13 +64,27 @@ function SettingsModal() {
       <Modal.Trigger
         className={`fixed bottom-12 ${
           buttonsPosition === "left" ? "left-12" : "right-12"
-        } z-40`}
+        } z-100`}
       >
-        <Button isIconOnly>
-          <Icon icon="gravity-ui:gear" />
-        </Button>
+        {/* Capture-phase log: if this fires but Button onPress doesn't, something is swallowing the click. If this never fires, something is on top of the whole trigger. */}
+        <div
+          onClickCapture={() =>
+            console.log("[SettingsModal] trigger area clicked (capture)")
+          }
+          style={{ display: "inline-block" }}
+        >
+          <Button
+            isIconOnly
+            onPress={() => {
+              console.log("[SettingsModal] trigger clicked, opening overlay");
+              overlayState.open();
+            }}
+          >
+            <Icon icon="gravity-ui:gear" />
+          </Button>
+        </div>
       </Modal.Trigger>
-      <Modal.Backdrop>
+      <Modal.Backdrop isDismissable={false}>
         <Modal.Container className={`theme-${theme} md:w-1/2`}>
           <Modal.Dialog className="sm:max-w-[360px]">
             {({ close }) => (

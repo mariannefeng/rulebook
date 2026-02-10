@@ -38,7 +38,7 @@ export default defineConfig({
             },
             handler: "CacheFirst",
             options: {
-              cacheName: "pdf-cache-no-jpx",
+              cacheName: "pdf-cache",
               expiration: {
                 maxEntries: 50, // Limit number of cached PDFs
                 maxAgeSeconds: 60 * 60 * 24 * 100, // 100 days

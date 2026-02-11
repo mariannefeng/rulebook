@@ -5,7 +5,7 @@ import "./index.css";
 import App from "./App.tsx";
 import posthog from "posthog-js";
 import { HeroUIProvider } from "@heroui/system";
-import { SettingsProvider } from "./contexts/SettingsContext";
+import SettingsContext, { SettingsProvider } from "./contexts/SettingsContext";
 import { SearchProvider } from "./contexts/SearchContext";
 import { PostHogProvider } from "@posthog/react";
 
@@ -21,11 +21,15 @@ createRoot(document.getElementById("root")!).render(
     <PostHogProvider client={posthog}>
       <HeroUIProvider>
         <SettingsProvider>
-          <SearchProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </SearchProvider>
+          <SettingsContext.Consumer>
+            {({ language }) => (
+              <SearchProvider key={language}>
+                <BrowserRouter>
+                  <App />
+                </BrowserRouter>
+              </SearchProvider>
+            )}
+          </SettingsContext.Consumer>
         </SettingsProvider>
       </HeroUIProvider>
     </PostHogProvider>

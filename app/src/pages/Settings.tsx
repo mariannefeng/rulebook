@@ -1,10 +1,7 @@
-import { Button, Dropdown, Label } from "@heroui/react";
+import { Button, ButtonGroup, ColorSwatchPicker } from "@heroui/react";
 import SettingsContext from "../contexts/SettingsContext";
-import { useContext, useEffect, useState } from "react";
-import type { Selection } from "@heroui/react";
+import { useContext } from "react";
 import BasePage from "../components/BasePage";
-
-const apiUrl = import.meta.env.VITE_API_URL;
 
 function Settings() {
   const {
@@ -17,128 +14,64 @@ function Settings() {
     setButtonsPosition,
   } = useContext(SettingsContext);
 
-  const [languages, setLanguages] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetch(`${apiUrl}/games/languages`)
-      .then((resp) => {
-        if (!resp.ok) throw new Error("Failed to fetch languages");
-        return resp.json();
-      })
-      .then((data) => {
-        setLanguages(data.languages || []);
-      })
-      .catch((err) => {
-        console.error("Error fetching languages:", err);
-      });
-  }, []);
-
-  const selectTheme = (keys: Selection) => {
-    const arr = Array.from(keys);
-    const themeKey = arr.length > 0 ? String(arr[0]) : "";
-    setTheme(themeKey);
-  };
-
-  const selectLanguage = (keys: Selection) => {
-    const arr = Array.from(keys);
-    const langKey = arr.length > 0 ? String(arr[0]) : "";
-    setLanguage(langKey);
-  };
-
-  const selectButtonsPosition = (keys: Selection) => {
-    const arr = Array.from(keys);
-    const buttonsPositionKey = arr.length > 0 ? String(arr[0]) : "";
-    setButtonsPosition(buttonsPositionKey);
-  };
-
   return (
     <BasePage showBackButton={true}>
-      <div className="w-3/4 md:w-1/2 mx-auto flex gap-4 flex-col mt-[25%]">
+      <div className="w-3/4 md:w-1/2 mx-auto flex gap-10 flex-col mt-[5%]">
         <div className="flex justify-between items-center">
-          <p className="text-lg">Theme</p>
+          <p className="text-xl">Language</p>
+
+          <ButtonGroup variant="tertiary">
+            <Button
+              variant={language === "en" ? "primary" : "secondary"}
+              onPress={() => setLanguage("en")}
+            >
+              <p>english</p>
+            </Button>
+            <Button
+              variant={language === "fr" ? "primary" : "secondary"}
+              onPress={() => setLanguage("fr")}
+            >
+              <p>french</p>
+            </Button>
+          </ButtonGroup>
+        </div>
+
+        <div className="flex justify-between items-center">
+          <p className="text-xl">Theme</p>
 
           <div>
-            <Dropdown>
-              <Dropdown.Trigger>
-                <Button aria-label="Menu" variant="secondary">
-                  {theme}
-                </Button>
-              </Dropdown.Trigger>
-
-              <Dropdown.Popover>
-                <Dropdown.Menu
-                  className="min-w-[256px]"
-                  disallowEmptySelection
-                  selectedKeys={new Set([theme])}
-                  selectionMode="single"
-                  onSelectionChange={selectTheme}
+            <ColorSwatchPicker value={themes.get(theme)}>
+              {Array.from(themes.entries()).map(([name, color]) => (
+                <ColorSwatchPicker.Item
+                  key={name}
+                  color={color}
+                  onPress={() => setTheme(name)}
                 >
-                  <Dropdown.Section>
-                    {themes.map((t) => (
-                      <Dropdown.Item key={t} id={t} textValue={t}>
-                        <Dropdown.ItemIndicator />
-                        <Label>{t}</Label>
-                      </Dropdown.Item>
-                    ))}
-                  </Dropdown.Section>
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown>
+                  <ColorSwatchPicker.Swatch />
+                  <ColorSwatchPicker.Indicator />
+                </ColorSwatchPicker.Item>
+              ))}
+            </ColorSwatchPicker>
           </div>
         </div>
 
         <div className="flex justify-between items-center">
-          <p className="text-lg">Language</p>
-          <Dropdown>
-            <Button aria-label="Menu" variant="secondary">
-              {language}
-            </Button>
-            <Dropdown.Popover className="min-w-[256px]">
-              <Dropdown.Menu
-                disallowEmptySelection
-                selectedKeys={new Set([language])}
-                selectionMode="single"
-                onSelectionChange={selectLanguage}
-              >
-                <Dropdown.Section>
-                  {languages.map((lang) => (
-                    <Dropdown.Item key={lang} id={lang} textValue={lang}>
-                      <Dropdown.ItemIndicator />
-                      <Label>{lang}</Label>
-                    </Dropdown.Item>
-                  ))}
-                </Dropdown.Section>
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
-        </div>
+          <p className="text-xl">Button Position</p>
 
-        <div className="flex justify-between items-center">
-          <p className="text-lg">Button Position</p>
-          <Dropdown>
-            <Button aria-label="Menu" variant="secondary">
-              {buttonsPosition}
+          <ButtonGroup variant="tertiary">
+            <Button
+              variant={buttonsPosition === "left" ? "primary" : "secondary"}
+              onPress={() => setButtonsPosition("left")}
+            >
+              <p>left</p>
             </Button>
-            <Dropdown.Popover className="min-w-[256px]">
-              <Dropdown.Menu
-                disallowEmptySelection
-                selectedKeys={new Set([buttonsPosition])}
-                selectionMode="single"
-                onSelectionChange={selectButtonsPosition}
-              >
-                <Dropdown.Section>
-                  <Dropdown.Item key="left" id="left" textValue="left">
-                    <Dropdown.ItemIndicator />
-                    <Label>Left</Label>
-                  </Dropdown.Item>
-                  <Dropdown.Item key="right" id="right" textValue="right">
-                    <Dropdown.ItemIndicator />
-                    <Label>Right</Label>
-                  </Dropdown.Item>
-                </Dropdown.Section>
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
+            <Button
+              variant={buttonsPosition === "right" ? "primary" : "secondary"}
+              onPress={() => setButtonsPosition("right")}
+            >
+              <p>right</p>
+            </Button>
+          </ButtonGroup>
         </div>
       </div>
     </BasePage>

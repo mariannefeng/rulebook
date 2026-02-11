@@ -10,7 +10,13 @@ const DEFAULTS = {
   THEME: "default",
   LANGUAGE: "en",
   BUTTONS_POSITION: "right",
-  THEMES: ["default", "muted", "rosewood", "toffee", "tropical"],
+  THEMES: new Map([
+    ["default", "#0485f7"],
+    ["muted", "#226081"],
+    ["rosewood", "#b9314f"],
+    ["toffee", "#9e6240"],
+    ["tropical", "#5c9991"],
+  ]),
 } as const;
 
 type Settings = {
@@ -20,7 +26,7 @@ type Settings = {
   setTheme: (theme: string) => void;
   language: string;
   setLanguage: (language: string) => void;
-  themes: string[];
+  themes: Map<string, string>;
 };
 
 const getStoredTheme = (): string => {
@@ -48,7 +54,7 @@ const SettingsContext = createContext<Settings>({
   setTheme: () => {},
   language: DEFAULTS.LANGUAGE,
   setLanguage: () => {},
-  themes: [...DEFAULTS.THEMES],
+  themes: DEFAULTS.THEMES,
 });
 
 export const SettingsProvider = ({
@@ -59,7 +65,7 @@ export const SettingsProvider = ({
   const [theme, setThemeState] = useState<string>(getStoredTheme);
   const [language, setLanguageState] = useState<string>(getStoredLanguage);
   const [buttonsPosition, setButtonsPositionState] = useState<string>(
-    getStoredButtonsPosition
+    getStoredButtonsPosition,
   );
 
   useEffect(() => {
@@ -97,7 +103,7 @@ export const SettingsProvider = ({
         setTheme,
         language,
         setLanguage,
-        themes: [...DEFAULTS.THEMES],
+        themes: DEFAULTS.THEMES,
         buttonsPosition,
         setButtonsPosition,
       }}

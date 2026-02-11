@@ -6,6 +6,7 @@ import App from "./App.tsx";
 import posthog from "posthog-js";
 import { HeroUIProvider } from "@heroui/system";
 import { SettingsProvider } from "./contexts/SettingsContext";
+import { SearchProvider } from "./contexts/SearchContext";
 import { PostHogProvider } from "@posthog/react";
 
 posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_ID, {
@@ -20,9 +21,11 @@ createRoot(document.getElementById("root")!).render(
     <PostHogProvider client={posthog}>
       <HeroUIProvider>
         <SettingsProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <SearchProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </SearchProvider>
         </SettingsProvider>
       </HeroUIProvider>
     </PostHogProvider>

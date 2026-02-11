@@ -3,6 +3,7 @@ import { Button, Input, Spinner } from "@heroui/react";
 import { GameCards } from "../components/GameCards";
 import BasePage from "../components/BasePage";
 import SettingsContext from "../contexts/SettingsContext";
+import SearchContext from "../contexts/SearchContext";
 import { getRecentGames, setRecentGames } from "../libs/localStorage";
 import type { Game } from "../libs/types";
 
@@ -10,9 +11,8 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
 function Search() {
   const { language } = useContext(SettingsContext);
-  const [search, setSearch] = useState("");
-  const [games, setGames] = useState<Game[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { search, setSearch, games, setGames, loading, setLoading } =
+    useContext(SearchContext);
   const [recents] = useState<Game[]>(() => {
     return getRecentGames();
   });
